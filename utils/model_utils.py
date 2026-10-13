@@ -2,56 +2,52 @@
 Model loading and prediction utilities for Random Forest FLFP model
 """
 
-import joblib
-import json
+import time
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent.parent
-MODEL_PATH = PROJECT_ROOT / "data" / "rf_model_artifacts.pkl"
-STATS_PATH = PROJECT_ROOT / "data" / "feature_stats.json"
+from utils.data_loader import load_flfp_data
+from utils.map_data_utils import load_test_set_data
+from utils.modeling import train_model, compute_feature_stats
 
-# Cache loaded artifacts (load once, use many times)
+# Cache trained artifacts (train once at startup, use many times)
 _cached_artifacts = None
 _cached_stats = None
 
 
 def load_model_artifacts():
     """
-    Load the trained Random Forest model once and cache it.
-    Model is loaded at app startup and reused for all predictions.
-    
+    Train the Random Forest once and cache it.
+    Model is trained at app startup and reused for all predictions.
+
     Returns:
         dict: Model artifacts including trained model, feature names, and importance
     """
     global _cached_artifacts
-    
+
     if _cached_artifacts is None:
-        if not MODEL_PATH.exists():
-            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-        _cached_artifacts = joblib.load(MODEL_PATH)
-        print(f"✓ Loaded RF model with {len(_cached_artifacts['feature_names'])} features")
-    
+        start = time.time()
+        _cached_artifacts = train_model(load_flfp_data())
+        first, last = _cached_artifacts['train_years']
+        print(f"✓ Trained RF model on {first}-{last} with "
+              f"{len(_cached_artifacts['feature_names'])} features in {time.time() - start:.1f}s")
+
     return _cached_artifacts
 
 
 def load_feature_stats():
     """
-    Load feature statistics for slider ranges and default values.
+    Compute feature statistics for slider ranges and default values.
     Used only for UI setup, not for prediction preprocessing.
-    
+
     Returns:
         dict: Feature statistics including min, max, mean, and default values
     """
     global _cached_stats
-    
+
     if _cached_stats is None:
-        if not STATS_PATH.exists():
-            raise FileNotFoundError(f"Stats file not found at {STATS_PATH}")
-        with open(STATS_PATH, 'r') as f:
-            _cached_stats = json.load(f)
-    
+        _cached_stats = compute_feature_stats(load_flfp_data(), load_test_set_data())
+
     return _cached_stats
 
 

@@ -1,0 +1,10 @@
+# Extra tools for the data download script and modeling notebooks
+-r requirements.txt
+wbdata==1.1.0
+wbgapi==1.0.12
+requests==2.32.5
+python-dotenv==1.2.1
+xgboost==3.1.1
+lightgbm==4.6.0
+catboost==1.2.8
+ipykernel==7.1.0

@@ -13,6 +13,11 @@ from datetime import datetime
 # Create output directory
 os.makedirs("data", exist_ok=True)
 
+# Year range: end two years back (t-2), the latest year with broad coverage
+# across indicators. Re-run each year to roll the data forward.
+START_YEAR = 2000
+END_YEAR = datetime.now().year - 2
+
 # Complete FLFP indicator set
 indicators = {
     # FLFP Measures
@@ -40,13 +45,18 @@ indicators = {
     "NV.SRV.TOTL.ZS": "services_gdp",
     "NV.IND.TOTL.ZS": "industry_gdp",
     
-    # Governance
-    "RL.EST": "rule_of_law",
+    # Governance (WGI; RL.EST was archived from WDI in 2025)
+    "GOV_WGI_RL.EST": "rule_of_law",
     
     # Labor Market
     "SL.UEM.TOTL.ZS": "unemployment_total",
     "SL.UEM.TOTL.FE.ZS": "unemployment_female",
     "SL.TLF.TOTL.IN": "labor_force_total",  # Total labor force (absolute)
+}
+
+# Indicators not in the default WDI source (2), mapped to their WB API source id
+indicator_sources = {
+    "GOV_WGI_RL.EST": 3,  # Worldwide Governance Indicators
 }
 
 print("COMPREHENSIVE FLFP Data Download")
@@ -63,7 +73,8 @@ def download_single_indicator(code, name):
         # Try the normal approach first
         df = wbdata.get_dataframe(
             indicators={code: name},
-            date=("2000", "2023"),
+            date=(str(START_YEAR), str(END_YEAR)),
+            source=indicator_sources.get(code),
             skip_cache=True
         )
         
@@ -92,9 +103,11 @@ def download_single_indicator(code, name):
                 url = f"https://api.worldbank.org/v2/countries/all/indicators/{code}"
                 params = {
                     'format': 'json',
-                    'date': '2000:2023',
+                    'date': f'{START_YEAR}:{END_YEAR}',
                     'per_page': 20000  # Large enough to get all data
                 }
+                if code in indicator_sources:
+                    params['source'] = indicator_sources[code]
                 
                 response = requests.get(url, params=params)
                 if response.status_code == 200:
@@ -280,8 +293,20 @@ df_final = df_final[~df_final['country_name'].isin(aggregates_to_remove)]
 # Also remove any entries with region='Aggregates' 
 if 'region' in df_final.columns:
     df_final = df_final[df_final['region'] != 'Aggregates']
+    # Drop territories only covered by non-WDI sources (e.g. WGI's Jersey, Niue)
+    df_final = df_final[df_final['region'].notna()]
 
 print(f"  Removed {initial - len(df_final):,} non-country rows")
+
+# Trim trailing years that have no FLFP observations yet
+last_flfp_year = int(df_final.loc[df_final['flfp_15_64'].notna(), 'year'].max())
+df_final = df_final[df_final['year'] <= last_flfp_year]
+print(f"  Latest year with FLFP data: {last_flfp_year}")
+
+# Drop countries with no FLFP observations (ILO does not model very small states)
+has_flfp = df_final.groupby('country_name')['flfp_15_64'].transform(lambda s: s.notna().any())
+print(f"  Removed {df_final.loc[~has_flfp, 'country_name'].nunique()} countries with no FLFP data")
+df_final = df_final[has_flfp]
 
 # Save
 df_final = df_final.sort_values(['country_name', 'year'])

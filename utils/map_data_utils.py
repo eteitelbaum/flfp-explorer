@@ -5,17 +5,20 @@ Helper functions for loading and processing test set data for map visualizations
 import pandas as pd
 from functools import lru_cache
 
+from utils.data_loader import load_flfp_data
+from utils.modeling import build_display_set
+
 @lru_cache(maxsize=1)
 def load_test_set_data():
     """
-    Load the preprocessed test set data with most recent year per country.
-    Cached to avoid reloading on every call.
-    
+    Build the display set: each country's FLFP in the latest year, with the
+    most recent predictor values. Cached to avoid rebuilding on every call.
+
     Returns:
-        pd.DataFrame: Test set with columns including country_name, iso3c, year, 
+        pd.DataFrame: Test set with columns including country_name, iso3c, year,
                       flfp_15_64, and all predictor features
     """
-    return pd.read_csv('data/test_set_latest.csv')
+    return build_display_set(load_flfp_data())
 
 
 def get_latest_flfp_by_country():

@@ -22,7 +22,8 @@ This project supports both `venv` (standard Python) and `conda` (Anaconda) envir
 
 3. **Install packages:**
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements.txt       # app only (what Render/Connect install)
+   pip install -r requirements-dev.txt   # app + data download + modeling notebooks
    ```
 
 ### Option 2: Using Conda (Anaconda/Miniconda)
@@ -53,6 +54,16 @@ This project supports both `venv` (standard Python) and `conda` (Anaconda) envir
 Make sure your environment is activated before running any code:
 - **venv**: `source venv/bin/activate`
 - **conda**: `conda activate wb-data-explorer`
+
+## Updating the Data
+
+Run once a year to roll the data forward:
+
+```bash
+python download_data.py
+```
+
+This downloads World Bank data from 2000 through the current year minus two (t-2) and writes `data/flfp_dataset.parquet`. Nothing else needs regenerating: when the app starts, `utils/modeling.py` trains the random forest on all years before the latest one and builds the Model Explorer's map and sliders from the latest year.
 
 ## Dependencies
 

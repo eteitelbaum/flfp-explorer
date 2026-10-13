@@ -9,6 +9,7 @@ from utils.data_loader import load_flfp_data, get_data_summary, get_indicator_op
 from components.column_chart import create_column_chart
 from components.sunburst import create_sunburst
 from components.line_chart import create_line_chart
+from utils.modeling import get_display_year
 
 def create_dashboard_layout():
     """
@@ -34,6 +35,10 @@ def create_dashboard_layout():
     initial_viz_1 = create_column_chart(df, initial_indicator, "all_regions", None, None)
     initial_viz_2 = create_sunburst(df, initial_indicator, "all_regions", None, None)
     initial_viz_3 = create_line_chart(df, initial_indicator, "all_regions", None, None)
+    
+    # Model years for the About text (training ends the year before the display year)
+    display_year = get_display_year(df)
+    first_year = int(df['year'].min())
     
     return dmc.Container(
         [
@@ -113,10 +118,47 @@ def create_dashboard_layout():
                                     dmc.Text(
                                         [
                                             "Use the Dashboard to explore patterns and trends in female labor force participation (FLFP) ",
-                                            "and related socioeconomic indicators across countries and regions. Then, go to the Model Explorer ",
-                                            "to view a predictive model of FLFP based on these factors, test predictions for specific countries, ",
-                                            "and create your own hypothetical scenarios. ",
-                                            "All data come from the World Bank Development Indicators database." 
+                                            "and related socioeconomic indicators across countries and regions."
+                                        ],
+                                        size="xs",
+                                        c="dimmed",
+                                        mb="xs",
+                                        style={"lineHeight": 1.5}
+                                    ),
+                                    dmc.Text(
+                                        [
+                                            "Then, go to the Model Explorer to see what a predictive model says about how these factors ",
+                                            "relate to FLFP. Click a country on the map to load its values, or move the sliders to create ",
+                                            "your own hypothetical scenarios, and see where the predicted rate falls among actual rates ",
+                                            "around the world."
+                                        ],
+                                        size="xs",
+                                        c="dimmed",
+                                        mb="xs",
+                                        style={"lineHeight": 1.5}
+                                    ),
+                                    dmc.Text(
+                                        [
+                                            "The predictive model is a random forest of 200 decision trees, trained on country-year data ",
+                                            f"from {first_year} to {display_year - 1} using the indicators featured in the explorer. ",
+                                            f"The map and histogram show each country's actual FLFP in {display_year}."
+                                        ],
+                                        size="xs",
+                                        c="dimmed",
+                                        mb="xs",
+                                        style={"lineHeight": 1.5}
+                                    ),
+                                    dmc.Text(
+                                        [
+                                            "All data come from the World Bank's World Development Indicators and Worldwide Governance ",
+                                            "Indicators. The code is available on ",
+                                            dmc.Anchor(
+                                                "GitHub",
+                                                href="https://github.com/eteitelbaum/flfp-explorer",
+                                                target="_blank",
+                                                size="xs"
+                                            ),
+                                            "."
                                         ],
                                         size="xs",
                                         c="dimmed",
